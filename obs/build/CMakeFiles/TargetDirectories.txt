@@ -1,0 +1,9 @@
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/emoji_reactions.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/package.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/package_source.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/edit_cache.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/rebuild_cache.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/list_install_components.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/install.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/install/local.dir
+/home/aschultheis/Projects/serc-reaction-app/obs/build/CMakeFiles/install/strip.dir

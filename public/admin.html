@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Reaction Room Admin</title>
+    <style>
+      :root { color-scheme: light; --cream: #f7f4ed; }
+      * { box-sizing: border-box; }
+      body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: start center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: var(--cream); }
+      main { width: min(100%, 420px); display: grid; place-items: center; gap: 24px; }
+      .switch { --switch-height: clamp(88px, 33.6vw, 152px); --thumb-extra: clamp(19.2px, calc(10.08vw - 7.2px), 38.4px); position: relative; display: block; width: min(100%, 360px); height: var(--switch-height); }
+      .switch input { width: 0; height: 0; opacity: 0; }
+      .slider { position: absolute; inset: 0; border-radius: 24px; background: #707570; cursor: pointer; box-shadow: inset 0 0 0 6px #00000012, 0 12px 30px #00000018; transition: .2s; }
+      .slider::before { content: ''; position: absolute; width: calc(var(--switch-height) - 24px); height: calc(var(--switch-height) - 24px); left: 12px; top: 12px; border-radius: 16px; background: white; box-shadow: 0 5px 12px #00000030; transform-origin: left center; transform: scaleX(.7); transition: .2s; }
+      input:checked + .slider { background: #25b96f; }
+      input:checked + .slider::before { left: calc(100% - var(--switch-height) + 12px + var(--thumb-extra)); }
+      input:focus-visible + .slider { outline: 5px solid #1d7cff; outline-offset: 6px; }
+      .controls { width: min(100%, 360px); display: grid; gap: 14px; }
+      .controls button { width: 100%; min-height: 62px; padding: 14px 16px; border: 0; border-radius: 12px; background: #18232a; color: white; font: 700 16px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+      .controls button:active { transform: scale(.98); }
+      .controls button:disabled { cursor: wait; opacity: .6; }
+      .controls .nuke { color: white; border: 4px solid #111; background: repeating-linear-gradient(135deg, #f5cf32 0 16px, #111 16px 32px); text-transform: uppercase; letter-spacing: .08em; }
+      .controls .nuke > span { -webkit-text-stroke: 4px #000; paint-order: stroke fill; text-shadow: 0 0 5px #000; }
+      .controls .nuke:hover { background: #d83932; color: white; font-weight: 800; }
+      .controls .nuke:hover > span, .controls .nuke:disabled > span { -webkit-text-stroke: 0; text-shadow: none; }
+      .controls .nuke:disabled { background: #aaa; color: #666; border-color: #888; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <label class="switch" aria-label="Publish reactions">
+        <input id="publishing-toggle" type="checkbox" />
+        <span class="slider"></span>
+      </label>
+      <div class="controls">
+        <button id="expire-sessions" type="button">Expire Sessions</button>
+        <button id="revoke-eula" type="button">Revoke EULA</button>
+        <button id="nuke-it" class="nuke" type="button"><span>Nuke It</span></button>
+      </div>
+    </main>
+    <script>
+      const toggle = document.querySelector('#publishing-toggle');
+      const nukeIt = document.querySelector('#nuke-it');
+      const update = (data) => { toggle.checked = data.publishingEnabled; nukeIt.disabled = Boolean(data.serviceNuked); };
+      fetch('/api/admin/status').then((response) => response.json()).then(update);
+      toggle.onchange = async () => {
+        toggle.disabled = true;
+        const response = await fetch('/api/admin/publishing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: toggle.checked }) });
+        update(await response.json());
+        toggle.disabled = false;
+      };
+      const expireSessions = document.querySelector('#expire-sessions');
+      expireSessions.onclick = async () => {
+        expireSessions.disabled = true;
+        await fetch('/api/admin/expire-sessions', { method: 'POST' });
+        expireSessions.disabled = false;
+      };
+      const revokeEula = document.querySelector('#revoke-eula');
+      revokeEula.onclick = async () => {
+        revokeEula.disabled = true;
+        await fetch('/api/admin/revoke-eula', { method: 'POST' });
+        revokeEula.disabled = false;
+      };
+      nukeIt.onclick = async () => {
+        nukeIt.disabled = true;
+        const response = await fetch('/api/admin/nuke', { method: 'POST' });
+        update(await response.json());
+      };
+    </script>
+  </body>
+</html>
