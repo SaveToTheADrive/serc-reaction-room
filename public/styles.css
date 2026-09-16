@@ -51,6 +51,7 @@ input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px #ed6a5222; }
 .reaction { min-height: 176px; border: 1px solid var(--line); border-radius: 20px; background: var(--paper); display: grid; place-items: center; align-content: center; transition: .2s ease; }
 .reaction:hover { transform: translateY(-5px) rotate(-1deg); border-color: var(--coral); box-shadow: 0 16px 28px #ed6a5222; }
 .reaction:active { transform: scale(.97); }
+.reaction.wiggle { animation: reaction-wiggle .35s ease-in-out; }
 .emoji-image { display: block; width: 4.3rem; height: 4.3rem; object-fit: contain; }
 .toast { position: fixed; left: 50%; bottom: 28px; transform: translate(-50%, 20px); padding: 15px 22.5px; border-radius: 999px; background: var(--ink); color: white; font-size: 1.25rem; text-align: center; opacity: 0; transition: .25s; pointer-events: none; }
 .toast.show { opacity: 1; transform: translate(-50%, 0); }
@@ -71,4 +72,5 @@ input:focus { border-color: var(--coral); box-shadow: 0 0 0 3px #ed6a5222; }
 .feed-time { color: var(--muted); font-size: .75rem; margin-top: 4px; }
 .empty { grid-column: 1 / -1; padding: 60px 20px; text-align: center; border: 1px dashed #c7c2b5; border-radius: 18px; color: var(--muted); }
 @keyframes arrive { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: none; } }
+@keyframes reaction-wiggle { 0% { transform: scale(.97) rotate(0); } 25% { transform: scale(.97) rotate(-4deg) translateX(-2px); } 50% { transform: scale(.97) rotate(4deg) translateX(2px); } 75% { transform: scale(.97) rotate(-2deg) translateX(-1px); } 100% { transform: scale(1) rotate(0); } }
 @media (max-width: 650px) { .shell { width: min(100% - 28px, 540px); } .brand { justify-content: flex-start; } .brand > .eyebrow { display: none; } .brand-mark { width: auto; flex: 1 1 auto; gap: 8px; font-size: .9rem; } .brand-partner-logo { width: clamp(100px, 34vw, 132px); } .intro, .eula { padding: 30px 22px; } .field { flex-direction: column; } .reaction-header, .presenter-top { display: block; margin-top: 24px; } .reaction-header p { margin-top: 16px; } .reactions { grid-template-columns: repeat(2, 1fr); } .reaction { min-height: 136px; } .eula-actions { align-items: stretch; flex-direction: column; } }

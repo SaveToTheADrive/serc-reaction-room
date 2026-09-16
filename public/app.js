@@ -149,12 +149,18 @@ function renderReactions() {
     try { await fetch('/api/logout', { method: 'POST' }); } finally { stopSessionMonitor(); renderLogin(); }
   };
   const sentAt = [];
-  document.querySelectorAll('.reaction').forEach((button) => button.onclick = async () => {
+  document.querySelectorAll('.reaction').forEach((button) => {
+    button.onclick = async () => {
     const now = Date.now();
     while (sentAt.length && now - sentAt[0] >= 1000) sentAt.shift();
     if (sentAt.length >= 5) return;
+    button.classList.remove('wiggle');
+    void button.offsetWidth;
+    button.classList.add('wiggle');
     sentAt.push(now);
     try { await api('/api/reactions', { method: 'POST', body: JSON.stringify({ id: button.dataset.id }) }); } catch (error) { if (!(error instanceof SessionExpiredError)) alert(error.message); }
+    };
+    button.addEventListener('animationend', () => button.classList.remove('wiggle'));
   });
 }
 
