@@ -79,7 +79,7 @@
         stopAdminMonitor();
         adminMonitor = setInterval(async () => {
           try { update(await adminFetch('/api/admin/status')); } catch {}
-        }, 1000);
+        }, 5000);
       };
       const update = (data) => { toggle.checked = data.publishingEnabled; nukeIt.disabled = Boolean(data.serviceNuked); };
       const adminFetch = async (url, options = {}) => {

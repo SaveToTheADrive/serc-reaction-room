@@ -63,7 +63,7 @@ function startServiceMonitor(initialServiceNuked = false, initialPublishingEnabl
       const status = await api('/api/status');
       handleServiceStatus(Boolean(status.serviceNuked), Boolean(status.publishingEnabled));
     } catch {}
-  }, 1000);
+  }, 5000);
 }
 
 function stopSessionMonitor() {
