@@ -4,7 +4,7 @@
 /home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/fire.svg
 /home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/clap.svg
 /home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/heart.svg
-/home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/zany.svg
 /home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/poop.svg
 /home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/love.svg
+/home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/sparkles.svg
 /home/aschultheis/Projects/serc-reaction-app/_CPack_Packages/Linux/ZIP/emoji-reactions-0.2.0-Linux/emoji-reactions/data/assets/joy.svg

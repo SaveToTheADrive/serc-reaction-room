@@ -8,15 +8,22 @@
       :root { color-scheme: light; --cream: #f7f4ed; }
       * { box-sizing: border-box; }
       body { margin: 0; min-height: 100vh; min-height: 100dvh; display: grid; place-items: start center; padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left)); background: var(--cream); }
-      main { width: min(100%, 420px); display: grid; place-items: center; gap: 24px; }
-      .switch { --switch-height: clamp(88px, 33.6vw, 152px); --thumb-extra: clamp(19.2px, calc(10.08vw - 7.2px), 38.4px); position: relative; display: block; width: min(100%, 360px); height: var(--switch-height); }
+      main { width: min(100%, 560px); display: grid; place-items: center; gap: 24px; }
+      #admin-controls { width: min(100%, 520px); display: grid; gap: 28px; }
+      .switch { --switch-height: clamp(80px, 28vw, 120px); --thumb-extra: clamp(17px, calc(8.4vw - 5px), 30px); position: relative; display: block; width: 100%; height: var(--switch-height); }
       .switch input { width: 0; height: 0; opacity: 0; }
       .slider { position: absolute; inset: 0; border-radius: 24px; background: #707570; cursor: pointer; box-shadow: inset 0 0 0 6px #00000012, 0 12px 30px #00000018; transition: .2s; }
       .slider::before { content: ''; position: absolute; width: calc(var(--switch-height) - 24px); height: calc(var(--switch-height) - 24px); left: 12px; top: 12px; border-radius: 16px; background: white; box-shadow: 0 5px 12px #00000030; transform-origin: left center; transform: scaleX(.7); transition: .2s; }
       input:checked + .slider { background: #25b96f; }
       input:checked + .slider::before { left: calc(100% - var(--switch-height) + 12px + var(--thumb-extra)); }
       input:focus-visible + .slider { outline: 5px solid #1d7cff; outline-offset: 6px; }
-      .controls { width: min(100%, 360px); display: grid; gap: 14px; }
+      .controls { width: 100%; display: grid; gap: 14px; }
+      .login-panel { width: min(100%, 360px); padding: 24px; border: 1px solid #dedbd1; border-radius: 16px; background: white; box-shadow: 0 12px 30px #0000000d; }
+      .login-panel h1 { margin: 0 0 8px; color: #18232a; font: 700 24px system-ui, sans-serif; }
+      .login-panel p { margin: 0 0 18px; color: #707570; font: 14px/1.5 system-ui, sans-serif; }
+      .error { min-height: 20px; margin: 12px 0 0 !important; color: #bd3d29 !important; }
+      .logout { min-height: 44px; margin-top: 4px; border: 1px solid #dedbd1; border-radius: 9px; background: transparent; color: #18232a; font: 600 14px system-ui, sans-serif; cursor: pointer; }
+      [hidden] { display: none !important; }
       .controls button { width: 100%; min-height: 62px; padding: 14px 16px; border: 0; border-radius: 12px; background: #18232a; color: white; font: 700 16px system-ui, sans-serif; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
       .controls button:active { transform: scale(.98); }
       .controls button:disabled { cursor: wait; opacity: .6; }
@@ -29,44 +36,90 @@
   </head>
   <body>
     <main>
-      <label class="switch" aria-label="Publish reactions">
-        <input id="publishing-toggle" type="checkbox" />
-        <span class="slider"></span>
-      </label>
-      <div class="controls">
-        <button id="expire-sessions" type="button">Expire Sessions</button>
-        <button id="revoke-eula" type="button">Revoke EULA</button>
-        <button id="nuke-it" class="nuke" type="button"><span>Nuke It</span></button>
-      </div>
+      <section id="login-panel" class="login-panel">
+        <h1>Admin access</h1>
+        <p id="login-error" class="error" role="alert">Open the admin access link provided by the operator.</p>
+      </section>
+      <section id="admin-controls" hidden>
+        <label class="switch" aria-label="Publish reactions">
+          <input id="publishing-toggle" type="checkbox" />
+          <span class="slider"></span>
+        </label>
+        <div class="controls">
+          <button id="expire-sessions" type="button">Expire Sessions</button>
+          <button id="revoke-eula" type="button">Revoke EULA</button>
+          <button id="nuke-it" class="nuke" type="button"><span>Nuke It</span></button>
+          <button id="logout" class="logout" type="button">Log out</button>
+        </div>
+      </section>
     </main>
     <script>
+      const adminTokenKey = 'reaction-room.admin-token';
+      const urlAdminToken = new URLSearchParams(location.search).get('bearer');
+      if (urlAdminToken) sessionStorage.setItem(adminTokenKey, urlAdminToken);
+      const loginPanel = document.querySelector('#login-panel');
+      const adminControls = document.querySelector('#admin-controls');
       const toggle = document.querySelector('#publishing-toggle');
       const nukeIt = document.querySelector('#nuke-it');
+      const loginError = document.querySelector('#login-error');
+      let adminMonitor = null;
+      const stopAdminMonitor = () => {
+        if (adminMonitor) clearInterval(adminMonitor);
+        adminMonitor = null;
+      };
+      const showLogin = (message = '') => {
+        stopAdminMonitor();
+        loginPanel.hidden = false;
+        adminControls.hidden = true;
+        loginError.textContent = message;
+      };
+      const showControls = () => {
+        loginPanel.hidden = true;
+        adminControls.hidden = false;
+        stopAdminMonitor();
+        adminMonitor = setInterval(async () => {
+          try { update(await adminFetch('/api/admin/status')); } catch {}
+        }, 1000);
+      };
       const update = (data) => { toggle.checked = data.publishingEnabled; nukeIt.disabled = Boolean(data.serviceNuked); };
-      fetch('/api/admin/status').then((response) => response.json()).then(update);
+      const adminFetch = async (url, options = {}) => {
+        const headers = { 'Content-Type': 'application/json', ...(options.headers || {}) };
+        const token = sessionStorage.getItem(adminTokenKey);
+        const requestUrl = token ? `${url}${url.includes('?') ? '&' : '?'}bearer=${encodeURIComponent(token)}` : url;
+        const response = await fetch(requestUrl, { ...options, headers });
+        const data = await response.json().catch(() => ({}));
+        if (response.status === 401) {
+          sessionStorage.removeItem(adminTokenKey);
+          showLogin(data.error || 'A valid admin bearer token is required.');
+        }
+        if (!response.ok) throw new Error(data.error || 'Request failed');
+        return data;
+      };
       toggle.onchange = async () => {
         toggle.disabled = true;
-        const response = await fetch('/api/admin/publishing', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ enabled: toggle.checked }) });
-        update(await response.json());
-        toggle.disabled = false;
+        try { update(await adminFetch('/api/admin/publishing', { method: 'POST', body: JSON.stringify({ enabled: toggle.checked }) })); }
+        finally { toggle.disabled = false; }
       };
       const expireSessions = document.querySelector('#expire-sessions');
       expireSessions.onclick = async () => {
         expireSessions.disabled = true;
-        await fetch('/api/admin/expire-sessions', { method: 'POST' });
-        expireSessions.disabled = false;
+        try { await adminFetch('/api/admin/expire-sessions', { method: 'POST' }); }
+        finally { expireSessions.disabled = false; }
       };
       const revokeEula = document.querySelector('#revoke-eula');
       revokeEula.onclick = async () => {
         revokeEula.disabled = true;
-        await fetch('/api/admin/revoke-eula', { method: 'POST' });
-        revokeEula.disabled = false;
+        try { await adminFetch('/api/admin/revoke-eula', { method: 'POST' }); }
+        finally { revokeEula.disabled = false; }
       };
       nukeIt.onclick = async () => {
         nukeIt.disabled = true;
-        const response = await fetch('/api/admin/nuke', { method: 'POST' });
-        update(await response.json());
+        try { update(await adminFetch('/api/admin/nuke', { method: 'POST' })); }
+        finally { nukeIt.disabled = true; }
       };
+      document.querySelector('#logout').onclick = () => { sessionStorage.removeItem(adminTokenKey); showLogin(); };
+      const savedToken = sessionStorage.getItem(adminTokenKey);
+      if (savedToken) adminFetch('/api/admin/status').then((data) => { showControls(); update(data); }).catch((error) => showLogin(error.message));
     </script>
   </body>
 </html>

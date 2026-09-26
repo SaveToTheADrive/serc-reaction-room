@@ -48,6 +48,7 @@ struct Particle {
 struct emoji_source_data {
 	obs_source_t *source = nullptr;
 	std::string events_url = default_events_url;
+	std::string bearer_token;
 	std::string font_face = "Arial";
 	int canvas_width = 1920;
 	int canvas_height = 1080;
@@ -134,6 +135,27 @@ static int curl_progress(void *userdata, curl_off_t, curl_off_t, curl_off_t, cur
 	return static_cast<emoji_source_data *>(userdata)->stopping ? 1 : 0;
 }
 
+static std::string events_request_url(const emoji_source_data *data)
+{
+	if (data->bearer_token.empty())
+		return data->events_url;
+
+	CURL *curl = curl_easy_init();
+	if (!curl)
+		return data->events_url;
+	char *escaped_token = curl_easy_escape(curl, data->bearer_token.c_str(), 0);
+	if (!escaped_token) {
+		curl_easy_cleanup(curl);
+		return data->events_url;
+	}
+	std::string url = data->events_url;
+	url += url.find('?') == std::string::npos ? "?bearer=" : "&bearer=";
+	url += escaped_token;
+	curl_free(escaped_token);
+	curl_easy_cleanup(curl);
+	return url;
+}
+
 static void event_loop(emoji_source_data *data)
 {
 	while (!data->stopping) {
@@ -141,7 +163,8 @@ static void event_loop(emoji_source_data *data)
 		if (!curl)
 			return;
 		data->event_buffer.clear();
-		curl_easy_setopt(curl, CURLOPT_URL, data->events_url.c_str());
+		const std::string request_url = events_request_url(data);
+		curl_easy_setopt(curl, CURLOPT_URL, request_url.c_str());
 		curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, curl_write);
 		curl_easy_setopt(curl, CURLOPT_WRITEDATA, data);
 		curl_easy_setopt(curl, CURLOPT_HTTPHEADER, nullptr);
@@ -301,6 +324,7 @@ static void source_update(void *opaque, obs_data_t *settings)
 	data->events_url = obs_data_get_string(settings, "events_url");
 	if (data->events_url.empty())
 		data->events_url = default_events_url;
+	data->bearer_token = obs_data_get_string(settings, "bearer_token");
 	data->canvas_width = static_cast<int>(obs_data_get_int(settings, "canvas_width"));
 	data->canvas_height = static_cast<int>(obs_data_get_int(settings, "canvas_height"));
 	data->show_names = obs_data_get_bool(settings, "show_names");
@@ -420,6 +444,7 @@ static void source_render(void *opaque, gs_effect_t *)
 static void source_defaults(obs_data_t *settings)
 {
 	obs_data_set_default_string(settings, "events_url", default_events_url);
+	obs_data_set_default_string(settings, "bearer_token", "");
 	obs_data_set_default_int(settings, "canvas_width", 1920);
 	obs_data_set_default_int(settings, "canvas_height", 1080);
 	obs_data_set_default_bool(settings, "show_names", true);
@@ -462,6 +487,7 @@ static obs_properties_t *source_properties(void *)
 {
 	obs_properties_t *properties = obs_properties_create();
 	obs_properties_add_text(properties, "events_url", "Reaction event URL", OBS_TEXT_DEFAULT);
+	obs_properties_add_text(properties, "bearer_token", "User bearer token", OBS_TEXT_PASSWORD);
 
 	obs_properties_t *layout = obs_properties_create();
 	obs_properties_add_int(layout, "canvas_width", "Area width", 1, 16384, 1);

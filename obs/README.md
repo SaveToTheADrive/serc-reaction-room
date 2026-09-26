@@ -2,10 +2,10 @@
 
 This directory contains a native OBS input-source plugin named **Emoji reactions**.
 
-The source connects to the app’s generic Server-Sent Events endpoint and consumes its batched reaction events:
+The source connects to the app’s generic Server-Sent Events endpoint and consumes its batched reaction events. Configure the audience `USER` token in the source properties; the plugin appends it as the `bearer` query parameter:
 
 ```text
-http://localhost:3000/api/events
+http://localhost:3000/api/events?bearer=<USER value from .tokens>
 ```
 
 ## Source properties
@@ -20,10 +20,11 @@ http://localhost:3000/api/events
 - Pattern supports Rain, Arcs, Fireworks, and Random spawn. Arcs rise and fall; Fireworks drift upward while decelerating to 50% of their initial burst speed and never fall back down.
 - Emoji lifetime controls how long particles remain visible.
 - Reaction event URL can point at another host or port.
+- User bearer token is stored as a masked password field and is sent only as the `bearer` query parameter for the event feed.
 
 The standard OBS properties panel places the event URL first and groups the remaining settings into Layout and Appearance sections. True two-column properties and removing OBS’s host-generated preview require a custom frontend properties dialog.
 
-The plugin currently supports these asset IDs: `heart`, `fire`, `joy`, `poop`, `party`, `wow`, `zany`, and `clap`.
+The plugin currently supports these asset IDs: `heart`, `fire`, `joy`, `poop`, `party`, `wow`, `sparkles`, and `clap`.
 
 ## Build
 
