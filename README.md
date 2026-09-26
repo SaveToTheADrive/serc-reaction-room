@@ -4,7 +4,7 @@ A small real-time audience reaction prototype.
 
 ## Run locally
 
-Requires Node.js 18 or newer.
+Requires Node.js 20.12 or newer. Copy `.env.example` to `.env` and set both tokens before starting.
 
 ```sh
 npm start
@@ -13,24 +13,31 @@ npm start
 Open the audience access URL with the token in its query string:
 
 ```text
-http://localhost:3000/?bearer=<USER value from .tokens>
+http://localhost:3000/?bearer=<USER_TOKEN value from .env>
 ```
 
-Open the presenter view with the same audience token and `presenter=1`. Open the admin panel with the admin token from `.tokens`:
+Open the presenter view with the same audience token and `presenter=1`. Open the admin panel with the admin token from `.env`:
 
 ```text
-http://localhost:3000/?presenter=1&bearer=<USER value from .tokens>
-http://localhost:3000/admin.html?bearer=<ADMIN value from .tokens>
+http://localhost:3000/?presenter=1&bearer=<USER_TOKEN value from .env>
+http://localhost:3000/admin.html?bearer=<ADMIN_TOKEN value from .env>
 ```
 
 ## Access tokens
 
-The server reads `USER` and `ADMIN` bearer tokens from `.tokens` at startup:
+The server reads `USER_TOKEN` and `ADMIN_TOKEN` bearer tokens from `.env` at startup:
 
-- `USER` authenticates audience users, the presenter feed, and audience data endpoints through the `?bearer=` query parameter.
-- `ADMIN` authenticates the admin panel through the `?bearer=` query parameter.
+- `USER_TOKEN` authenticates audience users, the presenter feed, and audience data endpoints through the `?bearer=` query parameter.
+- `ADMIN_TOKEN` authenticates the admin panel through the `?bearer=` query parameter.
 
-Both files contain one locally generated token and are ignored by Git. The working copy includes generated tokens; replace either file with a new random value and restart the server to rotate it.
+Use standard environment variable assignments in `.env`:
+
+```dotenv
+USER_TOKEN="your-audience-token"
+ADMIN_TOKEN="your-admin-token"
+```
+
+The server loads `.env` from the project directory at startup. Variables already set in the host environment take precedence. `.env` is ignored by Git; `.env.example` contains blank placeholders. Set each token to a separate random value and restart the server to rotate it. Missing tokens disable access for the corresponding role. Legacy `.token` and `.tokens` files are no longer read.
 
 ## Behavior
 
@@ -42,7 +49,7 @@ Both files contain one locally generated token and are ignored by Git. The worki
 - Raw received reactions are available as JSON at `http://localhost:3000/backend` or `/api/reactions` while publishing is enabled.
 - The admin page at `http://localhost:3000/admin.html` controls the generic publishing gate. When disabled, incoming reactions are silently acknowledged and dropped; no reaction records are returned or streamed outward.
 - When publishing is disabled without using `Nuke It`, audience and presenter views show a temporary “Stay Tuned!” message and automatically recover when publishing resumes.
-- The admin page requires the `ADMIN` bearer token from `.tokens`; audience and presenter access require the `USER` bearer token from `.tokens`. The UI does not ask for tokens; access links must include them.
+- The admin page requires the `ADMIN_TOKEN` bearer token from `.env`; audience and presenter access require the `USER_TOKEN` bearer token from `.env`. The UI does not ask for tokens; access links must include them.
 - The admin page’s `Expire Session` control invalidates all temporary audience sessions. Active audience clients detect this and reload; their EULA cookie is preserved.
 - The admin page’s `Nuke It` control disables publishing, expires all temporary sessions, and shows audience clients a full-screen offline message. Turning publishing back on clears that offline state.
 - An initial native OBS source plugin scaffold lives in [`obs/`](obs/), including the live SSE consumer and configurable particle source. It consumes the generic `/api/events` feed; the API does not identify or depend on that consumer.

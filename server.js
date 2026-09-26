@@ -3,34 +3,16 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
-function readTokenFile(fileName) {
-  try {
-    const contents = fs.readFileSync(path.join(__dirname, fileName), 'utf8').trim();
-    const namedTokens = {};
-    for (const line of contents.split(/\r?\n/)) {
-      const match = line.match(/^\s*([A-Za-z_][A-Za-z0-9_]*)\s*=\s*(.*?)\s*$/);
-      if (match) namedTokens[match[1].toUpperCase()] = match[2].trim();
-    }
-    return Object.keys(namedTokens).length ? namedTokens : { raw: contents };
-  } catch (error) {
-    if (error.code === 'ENOENT') return {};
-    throw error;
-  }
-}
-
-function configuredToken(config, names) {
-  for (const name of names) {
-    if (config[name]) return config[name];
-  }
-  return config.raw || '';
+try {
+  process.loadEnvFile(path.join(__dirname, '.env'));
+} catch (error) {
+  if (error.code !== 'ENOENT') throw error;
 }
 
 const port = Number(process.env.PORT) || 3000;
 const publicDir = path.join(__dirname, 'public');
-const tokenConfig = readTokenFile('.tokens');
-const legacyUserTokenConfig = readTokenFile('.token');
-const userBearerToken = configuredToken(tokenConfig, ['USER', 'USER_TOKEN', 'AUDIENCE', 'AUDIENCE_TOKEN']) || configuredToken(legacyUserTokenConfig, ['USER', 'USER_TOKEN', 'AUDIENCE', 'AUDIENCE_TOKEN']);
-const adminBearerToken = configuredToken(tokenConfig, ['ADMIN', 'ADMIN_TOKEN']);
+const userBearerToken = process.env.USER_TOKEN || '';
+const adminBearerToken = process.env.ADMIN_TOKEN || '';
 const sessions = new Map();
 const eventClients = new Set();
 const reactions = [];
