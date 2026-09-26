@@ -3,16 +3,32 @@ const fs = require('node:fs');
 const path = require('node:path');
 const crypto = require('node:crypto');
 
-try {
-  process.loadEnvFile(path.join(__dirname, '.env'));
-} catch (error) {
-  if (error.code !== 'ENOENT') throw error;
+// Cloud hosts inject these values directly. A local .env is optional.
+const envFile = path.join(__dirname, '.env');
+if (typeof process.loadEnvFile === 'function') {
+  try {
+    process.loadEnvFile(envFile);
+  } catch (error) {
+    if (error.code !== 'ENOENT') {
+      console.warn('[config] Could not load optional .env; using host environment variables.');
+    }
+  }
+} else if (fs.existsSync(envFile)) {
+  console.warn('[config] Local .env loading requires Node.js 20.12+; using host environment variables.');
 }
 
-const port = Number(process.env.PORT) || 3000;
+const portValue = (process.env.PORT || '').trim();
+const portIsValid = /^\d+$/.test(portValue) && Number(portValue) >= 1 && Number(portValue) <= 65535;
+const port = portIsValid ? Number(portValue) : 3000;
+if (portValue && !portIsValid) {
+  console.warn('[config] PORT must be an integer from 1 to 65535; using 3000.');
+}
 const publicDir = path.join(__dirname, 'public');
-const userBearerToken = process.env.USER_TOKEN || '';
-const adminBearerToken = process.env.ADMIN_TOKEN || '';
+const userBearerToken = (process.env.USER_TOKEN || '').trim();
+const adminBearerToken = (process.env.ADMIN_TOKEN || '').trim();
+for (const [name, value] of [['USER_TOKEN', userBearerToken], ['ADMIN_TOKEN', adminBearerToken]]) {
+  if (!value) console.warn(`[config] ${name} is missing or blank; access for this role will return HTTP 503.`);
+}
 const sessions = new Map();
 const eventClients = new Set();
 const reactions = [];
@@ -265,4 +281,15 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(port, () => console.log(`Reaction room running at http://localhost:${port}`));
+// Keep bind failures handled and retry the same configured port without restarting.
+server.on('listening', () => console.log(`Reaction room listening on 0.0.0.0:${port}`));
+server.on('error', (error) => {
+  console.error(`[startup] HTTP listener failed (${error.code || 'UNKNOWN'}); retrying port ${port} in 10 seconds.`);
+  setTimeout(startServer, 10_000);
+});
+
+function startServer() {
+  server.listen(port, '0.0.0.0');
+}
+
+startServer();

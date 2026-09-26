@@ -8,13 +8,13 @@ const { spawnSync } = require('node:child_process');
 // Exercise the server's startup configuration in isolation from its HTTP listener.
 const startup = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8').split('const sessions =')[0];
 
-function loadConfig(t, files, overrides = {}) {
+function loadConfig(t, files, overrides = {}, prelude = '') {
   const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'reaction-room-env-'));
   t.after(() => fs.rmSync(directory, { recursive: true, force: true }));
   for (const [name, contents] of Object.entries(files)) {
     fs.writeFileSync(path.join(directory, name), contents);
   }
-  fs.writeFileSync(path.join(directory, 'config.cjs'), `${startup}\nfs.writeFileSync(path.join(__dirname, 'result.json'), JSON.stringify({ userBearerToken, adminBearerToken, port }));`);
+  fs.writeFileSync(path.join(directory, 'config.cjs'), `${prelude}\n${startup}\nfs.writeFileSync(path.join(__dirname, 'result.json'), JSON.stringify({ userBearerToken, adminBearerToken, port }));`);
   const env = { ...process.env };
   delete env.USER_TOKEN;
   delete env.ADMIN_TOKEN;
@@ -50,4 +50,47 @@ test('legacy files and shell USER do not supply missing tokens', (t) => {
   assert.deepEqual(loadConfig(t, {
     '.tokens': 'USER=old-user\nADMIN=old-admin\n', '.token': 'old-token'
   }, { USER: 'shell-user' }), { userBearerToken: '', adminBearerToken: '', port: 3000 });
+});
+
+
+test('invalid ports fall back safely', (t) => {
+  for (const PORT of ['-1', 'Infinity', '65536', '3.14', 'abc', '0']) {
+    assert.equal(loadConfig(t, {}, { PORT }).port, 3000);
+  }
+});
+
+test('blank tokens disable access and surrounding whitespace is removed', (t) => {
+  assert.deepEqual(loadConfig(t, {}, { USER_TOKEN: '   ', ADMIN_TOKEN: ' admin ', PORT: ' 8080 ' }), {
+    userBearerToken: '', adminBearerToken: 'admin', port: 8080
+  });
+});
+
+test('older runtimes can boot with injected variables', (t) => {
+  assert.equal(loadConfig(t, { '.env': 'USER_TOKEN=file-user' }, { USER_TOKEN: 'host-user' },
+    'process.loadEnvFile = undefined;').userBearerToken, 'host-user');
+});
+
+test('unreadable optional .env does not crash startup', (t) => {
+  assert.equal(loadConfig(t, {}, { ADMIN_TOKEN: 'host-admin' },
+    "process.loadEnvFile = () => { throw Object.assign(new Error('unreadable'), { code: 'EACCES' }); };").adminBearerToken, 'host-admin');
+});
+
+test('listener binds externally and retries bind failures on the configured port', () => {
+  const vm = require('node:vm');
+  const { EventEmitter } = require('node:events');
+  const server = new EventEmitter();
+  const attempts = [];
+  const retries = [];
+  server.listen = (...args) => attempts.push(args);
+  const source = fs.readFileSync(path.join(__dirname, '..', 'server.js'), 'utf8');
+  vm.runInNewContext(source.slice(source.indexOf('// Keep bind failures')), {
+    server, port: 8080, console: { log() {}, error() {} },
+    setTimeout: (callback, delay) => retries.push({ callback, delay })
+  });
+  assert.deepEqual(attempts, [[8080, '0.0.0.0']]);
+  server.emit('error', Object.assign(new Error('occupied'), { code: 'EADDRINUSE' }));
+  assert.equal(retries.length, 1);
+  assert.equal(retries[0].delay, 10_000);
+  retries[0].callback();
+  assert.deepEqual(attempts, [[8080, '0.0.0.0'], [8080, '0.0.0.0']]);
 });

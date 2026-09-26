@@ -55,3 +55,11 @@ The server loads `.env` from the project directory at startup. Variables already
 - An initial native OBS source plugin scaffold lives in [`obs/`](obs/), including the live SSE consumer and configurable particle source. It consumes the generic `/api/events` feed; the API does not identify or depend on that consumer.
 
 Sessions and reaction history are held in memory, so restarting the server clears the server-side state.
+
+## Cloud deployment
+
+Set `USER_TOKEN` and `ADMIN_TOKEN` in the platform's environment settings (enter raw values without surrounding quotes). No `.env` file is required on the host. Keep the platform-provided `PORT`; the server binds to `0.0.0.0` on that port. Missing or invalid ports default to 3000; invalid values produce a warning. The accepted range is 1–65535.
+
+Local `.env` loading is optional: missing or unreadable files do not stop startup, and runtimes without the built-in loader can use injected variables. Use Node.js 20.12+ as specified in `package.json`. Missing or blank tokens produce a warning and disable the corresponding protected endpoints with HTTP 503. Surrounding token whitespace is removed. Token values are never logged.
+
+Listener errors are logged and retried on the same port every 10 seconds. The app cannot serve requests until the bind succeeds; platform health checks can still restart an unavailable instance. Check deployment logs and port settings if retries continue.
