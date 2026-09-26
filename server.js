@@ -24,9 +24,9 @@ if (portValue && !portIsValid) {
   console.warn('[config] PORT must be an integer from 1 to 65535; using 3000.');
 }
 const publicDir = path.join(__dirname, 'public');
-const userBearerToken = (process.env.USER_BEAR || '').trim();
-const adminBearerToken = (process.env.ADMIN_BEAR || '').trim();
-for (const [name, value] of [['USER_BEAR', userBearerToken], ['ADMIN_BEAR', adminBearerToken]]) {
+const userBearerToken = (process.env.USERBEAR || '').trim();
+const adminBearerToken = (process.env.ADMINBEAR || '').trim();
+for (const [name, value] of [['USERBEAR', userBearerToken], ['ADMINBEAR', adminBearerToken]]) {
   if (!value) console.warn(`[config] ${name} is missing or blank; access for this role will return HTTP 503.`);
 }
 const sessions = new Map();

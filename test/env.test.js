@@ -16,8 +16,8 @@ function loadConfig(t, files, overrides = {}, prelude = '') {
   }
   fs.writeFileSync(path.join(directory, 'config.cjs'), `${prelude}\n${startup}\nfs.writeFileSync(path.join(__dirname, 'result.json'), JSON.stringify({ userBearerToken, adminBearerToken, port }));`);
   const env = { ...process.env };
-  delete env.USER_BEAR;
-  delete env.ADMIN_BEAR;
+  delete env.USERBEAR;
+  delete env.ADMINBEAR;
   delete env.PORT;
   const result = spawnSync(process.execPath, [path.join(directory, 'config.cjs')], {
     cwd: os.tmpdir(), env: { ...env, ...overrides }, encoding: 'utf8'
@@ -28,20 +28,20 @@ function loadConfig(t, files, overrides = {}, prelude = '') {
 
 test('loads quoted tokens, comments and port from project .env', (t) => {
   assert.deepEqual(loadConfig(t, {
-    '.env': '# Access configuration\nUSER_BEAR="audience#value" # comment\nADMIN_BEAR=\'admin=value\'\nPORT=4321\n'
+    '.env': '# Access configuration\nUSERBEAR="audience#value" # comment\nADMINBEAR=\'admin=value\'\nPORT=4321\n'
   }), { userBearerToken: 'audience#value', adminBearerToken: 'admin=value', port: 4321 });
 });
 
 test('host environment takes precedence over .env', (t) => {
   assert.deepEqual(loadConfig(t, {
-    '.env': 'USER_BEAR=file-user\nADMIN_BEAR=file-admin\nPORT=4321\n'
-  }, { USER_BEAR: 'host-user', ADMIN_BEAR: 'host-admin', PORT: '5432' }), {
+    '.env': 'USERBEAR=file-user\nADMINBEAR=file-admin\nPORT=4321\n'
+  }, { USERBEAR: 'host-user', ADMINBEAR: 'host-admin', PORT: '5432' }), {
     userBearerToken: 'host-user', adminBearerToken: 'host-admin', port: 5432
   });
 });
 
 test('missing .env permits host-only configuration', (t) => {
-  assert.deepEqual(loadConfig(t, {}, { USER_BEAR: 'host-user', ADMIN_BEAR: 'host-admin' }), {
+  assert.deepEqual(loadConfig(t, {}, { USERBEAR: 'host-user', ADMINBEAR: 'host-admin' }), {
     userBearerToken: 'host-user', adminBearerToken: 'host-admin', port: 3000
   });
 });
@@ -60,18 +60,18 @@ test('invalid ports fall back safely', (t) => {
 });
 
 test('blank tokens disable access and surrounding whitespace is removed', (t) => {
-  assert.deepEqual(loadConfig(t, {}, { USER_BEAR: '   ', ADMIN_BEAR: ' admin ', PORT: ' 8080 ' }), {
+  assert.deepEqual(loadConfig(t, {}, { USERBEAR: '   ', ADMINBEAR: ' admin ', PORT: ' 8080 ' }), {
     userBearerToken: '', adminBearerToken: 'admin', port: 8080
   });
 });
 
 test('older runtimes can boot with injected variables', (t) => {
-  assert.equal(loadConfig(t, { '.env': 'USER_BEAR=file-user' }, { USER_BEAR: 'host-user' },
+  assert.equal(loadConfig(t, { '.env': 'USERBEAR=file-user' }, { USERBEAR: 'host-user' },
     'process.loadEnvFile = undefined;').userBearerToken, 'host-user');
 });
 
 test('unreadable optional .env does not crash startup', (t) => {
-  assert.equal(loadConfig(t, {}, { ADMIN_BEAR: 'host-admin' },
+  assert.equal(loadConfig(t, {}, { ADMINBEAR: 'host-admin' },
     "process.loadEnvFile = () => { throw Object.assign(new Error('unreadable'), { code: 'EACCES' }); };").adminBearerToken, 'host-admin');
 });
 
