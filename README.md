@@ -46,10 +46,20 @@ To rotate a token, edit its server constant and redeploy. These values are now p
 
 Sessions and reaction history are held in memory, so restarting the server clears the server-side state.
 
+## Persistent action logs
+
+The server appends actions to `logs/actions-YYYY-MM-DD.jsonl`, using UTC dates and one JSON record per line. Set `LOG_DIR` to choose another directory (relative paths resolve from the project directory). Only five action types are recorded: `reaction` (accepted reactions with display names and timestamps), `start` (process startup), `shutdown` (process exit), `publishing_changed` (the admin toggle, with `enabled: true` or `false`), and `nuke` (the admin nuke action). Reactions dropped while publishing is disabled and all other actions are not logged. Access tokens and session cookies are excluded. Shutdown is logged on normal process exit, including SIGINT and SIGTERM; forced kills (SIGKILL) and power loss cannot produce a shutdown record.
+
+Files are appended across restarts and are never cleared by logout or admin controls, including `Nuke It`. Logs are not replayed into the live feed or sessions. There is no automatic deletion; manage retention and backups for these files, which contain audience display names. The default `logs/` directory is ignored by Git. Keep any custom log directory outside `public/`.
+
+Records are synchronously written and flushed. Reactions, admin toggle changes, and nuke actions are logged before their in-memory changes or success responses; a write failure returns HTTP 500 and leaves that action unapplied. A startup log failure prevents the server from starting. Synchronous disk writes can limit throughput at high reaction volumes.
+
 ## Cloud deployment
 
 No token environment variables are required. Keep the platform-provided `PORT`; the server binds to `0.0.0.0` on that port. Missing or invalid ports default to 3000; invalid values produce a warning. The accepted range is 1–65535.
 
 Local `.env` loading remains optional for settings such as `PORT`. Use Node.js 20.12+ as specified in `package.json`.
+
+For logs to survive cloud redeployments or instance replacement, set `LOG_DIR` to a writable persistent volume. An ephemeral hosting filesystem does not provide lasting storage.
 
 Listener errors are logged and retried on the same port every 10 seconds. The app cannot serve requests until the bind succeeds; platform health checks can still restart an unavailable instance. Check deployment logs and port settings if retries continue.

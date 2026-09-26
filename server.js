@@ -35,6 +35,19 @@ const batchIntervalMs = 150;
 let publishingEnabled = true;
 let requiredEulaVersion = 1;
 let serviceNuked = false;
+const logDir = path.resolve(__dirname, process.env.LOG_DIR || 'logs');
+
+function logAction(action, details = {}) {
+  const at = new Date().toISOString();
+  try {
+    fs.mkdirSync(logDir, { recursive: true, mode: 0o700 });
+    fs.appendFileSync(path.join(logDir, `actions-${at.slice(0, 10)}.jsonl`),
+      `${JSON.stringify({ at, action, ...details })}\n`, { encoding: 'utf8', mode: 0o600, flush: true });
+  } catch (error) {
+    console.error(`[logging] Could not persist action (${error.code || 'UNKNOWN'}).`);
+    throw error;
+  }
+}
 
 const emojis = [
   { id: 'heart', emoji: '❤️', label: 'Heart' },
@@ -190,6 +203,7 @@ const server = http.createServer(async (req, res) => {
       const option = emojis.find((item) => item.id === body.id);
       if (!option) return sendJson(res, 400, { error: 'Unknown reaction.' });
       const reaction = { ...option, emoji: option.id, name: session.name, at: new Date().toISOString() };
+      logAction('reaction', { reaction });
       reactions.unshift(reaction);
       reactions.splice(50);
       if (publishingEnabled && pendingReactions.length < 5000) pendingReactions.push(reaction);
@@ -231,6 +245,7 @@ const server = http.createServer(async (req, res) => {
 		if (!requireBearer(req, res, adminBearerToken, 'Admin')) return;
 		const body = await readBody(req);
 		const nextPublishingEnabled = Boolean(body.enabled);
+		logAction('publishing_changed', { enabled: nextPublishingEnabled });
 		if (nextPublishingEnabled)
 			pendingReactions.length = 0;
 		publishingEnabled = nextPublishingEnabled;
@@ -251,6 +266,7 @@ const server = http.createServer(async (req, res) => {
 
 	if (req.method === 'POST' && requestPath === '/api/admin/nuke') {
 		if (!requireBearer(req, res, adminBearerToken, 'Admin')) return;
+		logAction('nuke', { sessionsExpired: sessions.size });
 		serviceNuked = true;
 		publishingEnabled = false;
 		pendingReactions.length = 0;
@@ -278,6 +294,17 @@ const server = http.createServer(async (req, res) => {
     sendJson(res, 500, { error: 'Something went wrong.' });
   }
 });
+
+logAction('start');
+process.once('exit', () => {
+  try {
+    logAction('shutdown');
+  } catch {
+    process.exitCode = 1;
+  }
+});
+process.once('SIGINT', () => process.exit(0));
+process.once('SIGTERM', () => process.exit(0));
 
 // Keep bind failures handled and retry the same configured port without restarting.
 server.on('listening', () => console.log(`Reaction room listening on 0.0.0.0:${port}`));
