@@ -82,7 +82,8 @@ setInterval(() => {
 }, batchIntervalMs);
 
 function serveStatic(req, res) {
-  const requested = req.url === '/' ? '/index.html' : req.url.split('?')[0];
+  const requestedPath = req.url.split('?')[0];
+  const requested = requestedPath === '/' ? '/index.html' : requestedPath;
   const filePath = path.normalize(path.join(publicDir, requested));
   if (!filePath.startsWith(publicDir)) return sendJson(res, 403, { error: 'Forbidden' });
   fs.readFile(filePath, (error, file) => {
