@@ -2,10 +2,10 @@
 
 This directory contains a native OBS input-source plugin named **Emoji reactions**.
 
-The source connects to the app’s generic Server-Sent Events endpoint and consumes its batched reaction events. Configure the audience `USERBEAR` token in the source properties; the plugin appends it as the `bearer` query parameter:
+The source connects to the app’s generic Server-Sent Events endpoint and consumes its batched reaction events. Configure the audience `userBearerToken` value from `server.js` in the source properties; the plugin appends it as the `bearer` query parameter:
 
 ```text
-http://localhost:3000/api/events?bearer=<USERBEAR value from .env>
+http://localhost:3000/api/events?bearer=<userBearerToken value from server.js>
 ```
 
 ## Source properties

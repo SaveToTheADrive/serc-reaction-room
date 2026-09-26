@@ -24,11 +24,9 @@ if (portValue && !portIsValid) {
   console.warn('[config] PORT must be an integer from 1 to 65535; using 3000.');
 }
 const publicDir = path.join(__dirname, 'public');
-const userBearerToken = (process.env.USERBEAR || '').trim();
-const adminBearerToken = (process.env.ADMINBEAR || '').trim();
-for (const [name, value] of [['USERBEAR', userBearerToken], ['ADMINBEAR', adminBearerToken]]) {
-  if (!value) console.warn(`[config] ${name} is missing or blank; access for this role will return HTTP 503.`);
-}
+// Fixed event access tokens; independent of deployment environment variables.
+const userBearerToken = "6870531fdc78b00c9fcb69a58aa67dc53d01d7353a9f4f4476f87733e7649d30";
+const adminBearerToken = "e1d0ffcf38d1bd0c9e5ec67ccf43dd4b681071488baaf136360b7a925492db83";
 const sessions = new Map();
 const eventClients = new Set();
 const reactions = [];

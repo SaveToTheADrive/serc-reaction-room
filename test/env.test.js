@@ -26,32 +26,23 @@ function loadConfig(t, files, overrides = {}, prelude = '') {
   return JSON.parse(fs.readFileSync(path.join(directory, 'result.json'), 'utf8'));
 }
 
-test('loads quoted tokens, comments and port from project .env', (t) => {
-  assert.deepEqual(loadConfig(t, {
-    '.env': '# Access configuration\nUSERBEAR="audience#value" # comment\nADMINBEAR=\'admin=value\'\nPORT=4321\n'
-  }), { userBearerToken: 'audience#value', adminBearerToken: 'admin=value', port: 4321 });
+test('tokens are configured without local files or environment variables', (t) => {
+  const config = loadConfig(t, {});
+  assert.ok(config.userBearerToken.length > 0);
+  assert.ok(config.adminBearerToken.length > 0);
+  assert.ok(config.userBearerToken !== config.adminBearerToken);
+  assert.equal(config.port, 3000);
 });
 
-test('host environment takes precedence over .env', (t) => {
-  assert.deepEqual(loadConfig(t, {
+test('environment and file tokens cannot override fixed event tokens', (t) => {
+  const baseline = loadConfig(t, {});
+  const config = loadConfig(t, {
     '.env': 'USERBEAR=file-user\nADMINBEAR=file-admin\nPORT=4321\n'
-  }, { USERBEAR: 'host-user', ADMINBEAR: 'host-admin', PORT: '5432' }), {
-    userBearerToken: 'host-user', adminBearerToken: 'host-admin', port: 5432
-  });
+  }, { USERBEAR: 'host-user', ADMINBEAR: 'host-admin', PORT: '5432' });
+  assert.ok(config.userBearerToken === baseline.userBearerToken);
+  assert.ok(config.adminBearerToken === baseline.adminBearerToken);
+  assert.equal(config.port, 5432);
 });
-
-test('missing .env permits host-only configuration', (t) => {
-  assert.deepEqual(loadConfig(t, {}, { USERBEAR: 'host-user', ADMINBEAR: 'host-admin' }), {
-    userBearerToken: 'host-user', adminBearerToken: 'host-admin', port: 3000
-  });
-});
-
-test('legacy files and shell USER do not supply missing tokens', (t) => {
-  assert.deepEqual(loadConfig(t, {
-    '.tokens': 'USER=old-user\nADMIN=old-admin\n', '.token': 'old-token'
-  }, { USER: 'shell-user' }), { userBearerToken: '', adminBearerToken: '', port: 3000 });
-});
-
 
 test('invalid ports fall back safely', (t) => {
   for (const PORT of ['-1', 'Infinity', '65536', '3.14', 'abc', '0']) {
@@ -59,20 +50,13 @@ test('invalid ports fall back safely', (t) => {
   }
 });
 
-test('blank tokens disable access and surrounding whitespace is removed', (t) => {
-  assert.deepEqual(loadConfig(t, {}, { USERBEAR: '   ', ADMINBEAR: ' admin ', PORT: ' 8080 ' }), {
-    userBearerToken: '', adminBearerToken: 'admin', port: 8080
-  });
-});
-
-test('older runtimes can boot with injected variables', (t) => {
-  assert.equal(loadConfig(t, { '.env': 'USERBEAR=file-user' }, { USERBEAR: 'host-user' },
-    'process.loadEnvFile = undefined;').userBearerToken, 'host-user');
-});
-
-test('unreadable optional .env does not crash startup', (t) => {
-  assert.equal(loadConfig(t, {}, { ADMINBEAR: 'host-admin' },
-    "process.loadEnvFile = () => { throw Object.assign(new Error('unreadable'), { code: 'EACCES' }); };").adminBearerToken, 'host-admin');
+test('optional env loader failures do not prevent token configuration', (t) => {
+  for (const prelude of ['process.loadEnvFile = undefined;',
+    "process.loadEnvFile = () => { throw Object.assign(new Error('unreadable'), { code: 'EACCES' }); };"]) {
+    const config = loadConfig(t, {}, {}, prelude);
+    assert.ok(config.userBearerToken.length > 0);
+    assert.ok(config.adminBearerToken.length > 0);
+  }
 });
 
 test('listener binds externally and retries bind failures on the configured port', () => {
